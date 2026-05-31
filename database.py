@@ -26,10 +26,14 @@ logger = logging.getLogger(__name__)
 import os
 
 # os.environ.get o'rniga os.getenv ishlating
+# database.py faylidagi o'zgartirish
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not DATABASE_URL:
-    print("XATO: DATABASE_URL topilmadi!")
+if DATABASE_URL is None:
+    raise ValueError("DATABASE_URL muhit o'zgaruvchisi o'rnatilmagan!")
+
+if DATABASE_URL.startswith("postgres://"):
+    # qolgan kodlaringiz
 
 # Railway ba'zan "postgres://" beradi — pg8000 uchun "postgresql+pg8000://" kerak
 if DATABASE_URL.startswith("postgres://"):
