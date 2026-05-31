@@ -23,7 +23,13 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────
 # Database URL
 # ─────────────────────────────────────────────
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+import os
+
+# os.environ.get o'rniga os.getenv ishlating
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    print("XATO: DATABASE_URL topilmadi!")
 
 # Railway ba'zan "postgres://" beradi — pg8000 uchun "postgresql+pg8000://" kerak
 if DATABASE_URL.startswith("postgres://"):
