@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AutoPass Bot</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* ===== CSS O'ZGARUVCHILARI ===== */
+        :root {
+            --bg-primary: #0e1621;
+            --bg-secondary: #17212b;
+            --bg-card: #1e2c3a;
+            --bg-input: #242f3d;
+            --bg-hover: #2b3a4a;
+            --accent: #5288c1;
+            --accent-light: #6aa3dc;
+            --accent-glow: rgba(82, 136, 193, 0.15);
+            --success: #4caf7d;
+            --danger: #e05c65;
+            --warning: #f0a732;
+            --filtered: #8b97a5;
+            --text-primary: #e8f0f7;
+            --text-secondary: #8b97a5;
+            --text-muted: #5a6a7a;
+            --border: rgba(82, 136, 193, 0.15);
+            --border-strong: rgba(82, 136, 193, 0.3);
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --nav-height: 64px;
+            --font: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* ===== RESET VA BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body {
+            height: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font);
+            font-size: 14px;
+            line-height: 1.5;
+            overflow: hidden;
+        }
+
+        /* ===== APP CONTAINER ===== */
+        #app {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ===== SCROLLABLE CONTENT ===== */
+        .page-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 16px calc(var(--nav-height) + 20px);
+            -webkit-overflow-scrolling: touch;
+        }
+        .page-content::-webkit-scrollbar { display: none; }
+
+        /* ===== SAHIFALAR ===== */
+        .page { display: none; animation: fadeIn 0.2s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+        /* ===== BOTTOM NAVIGATION ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: var(--nav-height);
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: all 0.2s ease;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 500;
+            min-width: 56px;
+        }
+        .nav-item.active { color: var(--accent); }
+        .nav-item svg { width: 22px; height: 22px; transition: transform 0.2s ease; }
+        .nav-item.active svg { transform: scale(1.1); }
+
+        /* ===== HEADER ===== */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .page-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        /* ===== KARTALAR ===== */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+        .card:hover { border-color: var(--border-strong); }
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /* ===== STATISTIKA KARTALAR ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+        }
+        .stat-icon {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ===== TUGMALAR ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-family: var(--font);
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--accent-light); transform: translateY(-1px); }
+        .btn-primary:active { transform: none; }
+        .btn-ghost {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--border-strong);
+        }
+        .btn-ghost:hover { background: var(--accent-glow); }
+        .btn-danger {
+            background: rgba(224, 92, 101, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(224, 92, 101, 0.2);
+        }
+        .btn-danger:hover { background: rgba(224, 92, 101, 0.25); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+        .btn-full { width: 100%; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        /* ===== TOGGLE SWITCH ===== */
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--bg-input);
+            border-radius: 24px;
+            transition: 0.3s;
+            border: 1px solid var(--border);
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 18px; height: 18px;
+            left: 2px; bottom: 2px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+        .toggle input:checked + .toggle-slider::before { transform: translateX(20px); background: white; }
+
+        /* ===== BADGE ===== */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-success { background: rgba(76, 175, 125, 0.15); color: var(--success); }
+        .badge-danger { background: rgba(224, 92, 101, 0.15); color: var(--danger); }
+        .badge-warning { background: rgba(240, 167, 50, 0.15); color: var(--warning); }
+        .badge-gray { background: rgba(139, 151, 165, 0.15); color: var(--filtered); }
+        .badge-dot::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        /* ===== FORMA ELEMENTLARI ===== */
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: var(--font);
+            padding: 10px 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: var(--accent);
+            background: var(--bg-card);
+        }
+        .form-textarea { resize: vertical; min-height: 80px; }
+        .form-select option { background: var(--bg-card); }
+        .form-hint { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+
+        /* ===== RADIO/CHECKBOX KARTALAR ===== */
+        .option-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .option-card {
+            background: var(--bg-input);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .option-card.selected {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+        .option-card-icon { font-size: 20px; margin-bottom: 4px; }
+        .option-card-label { font-size: 13px; font-weight: 600; }
+
+        /* ===== STEP INDICATOR ===== */
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            padding: 0 8px;
+        }
+        .step-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: all 0.3s;
+        }
+        .step-dot.active { background: var(--accent); width: 24px; border-radius: 4px; }
+        .step-dot.done { background: var(--success); }
+        .step-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+        .step-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+
+        /* ===== LOG ELEMENTLAR ===== */
+        .log-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .log-item:last-child { border-bottom: none; }
+        .log-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+        .log-text { flex: 1; min-width: 0; }
+        .log-route { font-size: 13px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .log-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .log-status { flex-shrink: 0; }
+
+        /* ===== FORWARDING ELEMENT ===== */
+        .forwarding-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 10px;
+            transition: border-color 0.2s;
+        }
+        .forwarding-item:hover { border-color: var(--border-strong); }
+        .forwarding-icon {
+            width: 40px; height: 40px;
+            background: var(--accent-glow);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .forwarding-info { flex: 1; min-width: 0; }
+        .forwarding-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .forwarding-route { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .forwarding-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+        /* ===== ACCOUNT ELEMENT ===== */
+        .account-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 10px;
+        }
+        .account-avatar {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, var(--accent), #3a6b9e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .account-info { flex: 1; min-width: 0; }
+        .account-phone { font-size: 15px; font-weight: 600; }
+        .account-status { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+        /* ===== BO'SH HOLAT ===== */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-secondary);
+        }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+        .empty-desc { font-size: 13px; color: var(--text-muted); }
+
+        /* ===== LOADER ===== */
+        .loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(14, 22, 33, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        .loader-overlay.hidden { display: none; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== TOAST ===== */
+        .toast-container {
+            position: fixed;
+            top: 16px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+            width: calc(100% - 32px);
+            max-width: 360px;
+        }
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideDown 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+            box-shadow: var(--shadow);
+        }
+        .toast.success { border-color: rgba(76, 175, 125, 0.4); }
+        .toast.error { border-color: rgba(224, 92, 101, 0.4); }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 500;
+            display: flex;
+            align-items: flex-end;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--radius) var(--radius) 0 0;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+        .modal-handle {
+            width: 36px; height: 4px;
+            background: var(--border-strong);
+            border-radius: 2px;
+            margin: 0 auto 20px;
+        }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+
+        /* ===== DIVIDER ===== */
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 16px 0;
+        }
+
+        /* ===== CHIP TAGS ===== */
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .chip-remove { cursor: pointer; color: var(--text-muted); font-size: 14px; line-height: 1; }
+        .chip-remove:hover { color: var(--danger); }
+
+        /* ===== PROGRESS ===== */
+        .progress-bar {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+
+        /* ===== SETTINGS ROW ===== */
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .settings-row:last-child { border-bottom: none; }
+        .settings-row-left { flex: 1; }
+        .settings-row-label { font-size: 14px; font-weight: 500; }
+        .settings-row-hint { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+        /* ===== KIRISH ANIMATSIYASI ===== */
+        .dashboard-welcome {
+            background: linear-gradient(135deg, #1a2d40, #1e3a52);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .dashboard-welcome::before {
+            content: '';
+            position: absolute;
+            top: -30px; right: -30px;
+            width: 120px; height: 120px;
+            background: radial-gradient(circle, rgba(82,136,193,0.2), transparent 70%);
+        }
+        .welcome-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+        .welcome-sub { font-size: 13px; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+
+<!-- Loader -->
+<div class="loader-overlay" id="loader">
+    <div class="spinner"></div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Confirm modal -->
+<div class="modal-overlay hidden" id="confirmModal">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <div class="modal-title" id="confirmTitle">Tasdiqlash</div>
+        <p id="confirmText" style="color: var(--text-secondary); margin-bottom: 20px;"></p>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-ghost btn-full" onclick="closeConfirm()">Bekor qilish</button>
+            <button class="btn btn-danger btn-full" id="confirmBtn">O'chirish</button>
+        </div>
+    </div>
+</div>
+
+<!-- Asosiy App -->
+<div id="app">
+    <div class="page-content">
+
+        <!-- ===== DASHBOARD ===== -->
+        <div class="page active" id="page-dashboard">
+            <div class="page-header">
+                <div class="page-title">AutoPass Bot</div>
+                <div id="userBadge" class="badge badge-success badge-dot">Faol</div>
+            </div>
+
+            <div class="dashboard-welcome">
+                <div class="welcome-title">Xush kelibsiz! 👋</div>
+                <div class="welcome-sub" id="welcomeUsername">Yuklanmoqda...</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(82,136,193,0.15);">📡</div>
+                    <div class="stat-value" id="statForwardings">—</div>
+                    <div class="stat-label">Jami forwarding</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(76,175,125,0.15);">✅</div>
+                    <div class="stat-value" id="statToday">—</div>
+                    <div class="stat-label">Bugun yuborildi</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(240,167,50,0.15);">👤</div>
+                    <div class="stat-value" id="statAccounts">—</div>
+                    <div class="stat-label">Ulangan akkaunt</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(224,92,101,0.15);">❌</div>
+                    <div class="stat-value" id="statFailed">—</div>
+                    <div class="stat-label">Xato</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Oxirgi aktivlik</div>
+                    <button class="btn btn-ghost btn-sm" onclick="navigateTo('logs')">Barchasi</button>
+                </div>
+                <div id="recentLogs">
+                    <div style="text-align:center;padding:20px;color:var(--text-muted);">Yuklanmoqda...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== AKKAUNTLAR ===== -->
+        <div class="page" id="page-accounts">
+            <div class="page-header">
+                <div class="page-title">Akkauntlar</div>
+            </div>
+
+            <div id="accountsList">
+                <div style="text-align:center;padding:32px;color:var(--text-muted);">Yuklanmoqda...</div>
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="loginWithBot()" style="margin-top:8px;">
+                + Yangi akkaunt ulash
+            </button>
+        </div>
+
+        <!-- ===== FORWARDINGLAR ===== -->
+        <div class="page" id="page-forwardings">
+            <div class="page-header">
+                <div class="page-title">Forwardinglar</div>
+                <button class="btn btn-primary btn-sm" onclick="navigateTo('new')">+ Yangi</button>
+            </div>
+
+            <div id="forwardingsList">
+                <div style="text-align:center;padding:32px;color:var(--text-muted);">Yuklanmoqda...</div>
+            </div>
+        </div>
+
+        <!-- ===== YANGI FORWARDING ===== -->
+        <div class="page" id="page-new">
+            <div class="page-header">
+                <div>
+                    <button class="btn btn-ghost btn-sm" onclick="cancelNew()">← Orqaga</button>
+                </div>
+                <div class="page-title" style="font-size:18px;" id="newStepTitle">Yangi Forwarding</div>
+                <div style="font-size:13px;color:var(--text-secondary);" id="newStepNum">1/7</div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="newProgress" style="width: 14.28%"></div>
+            </div>
+
+            <!-- Step 1: Akkaunt tanlash -->
+            <div class="step-panel" id="step1">
+                <div class="step-title">Akkaunt tanlash</div>
+                <div class="step-desc">Qaysi akkaunt orqali forward qilishni tanlang</div>
+                <div id="accountChoices">
+                    <div style="text-align:center;padding:20px;color:var(--text-muted);">Yuklanmoqda...</div>
+                </div>
+            </div>
+
+            <!-- Step 2: Manba -->
+            <div class="step-panel hidden" id="step2">
+                <div class="step-title">Manba kanal</div>
+                <div class="step-desc">Xabarlar qayerdan kelishi kerak?</div>
+                <div class="form-group">
+                    <label class="form-label">Kanal username yoki link</label>
+                    <input class="form-input" id="sourceInput" placeholder="@kanal_nomi yoki https://t.me/..." type="text">
+                    <div class="form-hint">Masalan: @uz_news yoki https://t.me/uz_news</div>
+                </div>
+            </div>
+
+            <!-- Step 3: Manzil -->
+            <div class="step-panel hidden" id="step3">
+                <div class="step-title">Manzil kanal</div>
+                <div class="step-desc">Xabarlar qaerga yuborilsin?</div>
+                <div class="form-group">
+                    <label class="form-label">Manzil username yoki link</label>
+                    <input class="form-input" id="destInput" placeholder="@manzil_kanal" type="text">
+                    <div class="form-hint">Bot manzil kanalda admin bo'lishi shart</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Forwarding nomi</label>
+                    <input class="form-input" id="fwdName" placeholder="Masalan: Yangiliklar → Mening kanalim" type="text">
+                </div>
+            </div>
+
+            <!-- Step 4: Rejim -->
+            <div class="step-panel hidden" id="step4">
+                <div class="step-title">Rejim tanlash</div>
+                <div class="step-desc">Xabarlar qanday yuborilsin?</div>
+                <div class="option-cards">
+                    <div class="option-card selected" id="optCopy" onclick="selectMode('copy')">
+                        <div class="option-card-icon">📋</div>
+                        <div class="option-card-label">Copy</div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Muallif ko'rinmaydi</div>
+                    </div>
+                    <div class="option-card" id="optForward" onclick="selectMode('forward')">
+                        <div class="option-card-icon">↗️</div>
+                        <div class="option-card-label">Forward</div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Muallif ko'rinadi</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Filterlar -->
+            <div class="step-panel hidden" id="step5">
+                <div class="step-title">Filterlar</div>
+                <div class="step-desc">Qaysi xabarlar o'tkazilsin?</div>
+
+                <div class="card" style="margin-bottom:12px;">
+                    <div class="settings-row">
+                        <div class="settings-row-left">
+                            <div class="settings-row-label">Faqat media</div>
+                            <div class="settings-row-hint">Rasm, video, fayl bo'lgan xabarlar</div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="filterMediaOnly">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-row">
+                        <div class="settings-row-left">
+                            <div class="settings-row-label">Faqat matn</div>
+                            <div class="settings-row-hint">Media bo'lmagan xabarlar</div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="filterTextOnly">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Whitelist kalit so'zlar</label>
+                    <div style="display:flex;gap:8px;">
+                        <input class="form-input" id="whitelistInput" placeholder="So'z kiriting..." type="text" style="flex:1;">
+                        <button class="btn btn-ghost btn-sm" onclick="addChip('whitelist')">+</button>
+                    </div>
+                    <div class="chips" id="whitelistChips"></div>
+                    <div class="form-hint">Bo'sh bo'lsa — barcha xabarlar o'tadi</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Blacklist kalit so'zlar</label>
+                    <div style="display:flex;gap:8px;">
+                        <input class="form-input" id="blacklistInput" placeholder="So'z kiriting..." type="text" style="flex:1;">
+                        <button class="btn btn-ghost btn-sm" onclick="addChip('blacklist')">+</button>
+                    </div>
+                    <div class="chips" id="blacklistChips"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Har N-chi xabar (0 = hammasi)</label>
+                    <input class="form-input" id="everyNth" type="number" min="0" max="100" value="0" placeholder="0">
+                    <div class="form-hint">Masalan 3 kiritilsa — har 3-chi xabar o'tadi</div>
+                </div>
+            </div>
+
+            <!-- Step 6: Modifikatsiya -->
+            <div class="step-panel hidden" id="step6">
+                <div class="step-title">Modifikatsiya</div>
+                <div class="step-desc">Xabar matni qanday o'zgartirilsin?</div>
+
+                <div class="form-group">
+                    <label class="form-label">Prefix (boshi)</label>
+                    <input class="form-input" id="modPrefix" placeholder="Xabar oldiga qo'shimcha matn" type="text">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Suffix (oxiri)</label>
+                    <input class="form-input" id="modSuffix" placeholder="Xabar oxiriga qo'shimcha matn" type="text">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Almashtirishlar</label>
+                    <div style="display:flex;gap:6px;margin-bottom:8px;">
+                        <input class="form-input" id="replaceFrom" placeholder="Eski matn" type="text" style="flex:1;">
+                        <input class="form-input" id="replaceTo" placeholder="Yangi matn" type="text" style="flex:1;">
+                        <button class="btn btn-ghost btn-sm" onclick="addReplacement()">+</button>
+                    </div>
+                    <div id="replacementList" class="chips"></div>
+                </div>
+
+                <div class="card">
+                    <div class="settings-row">
+                        <div class="settings-row-left">
+                            <div class="settings-row-label">Caption'ni o'chirish</div>
+                            <div class="settings-row-hint">Media xabarlarning captionini olib tashlash</div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="removeCaption">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 7: Jadval -->
+            <div class="step-panel hidden" id="step7">
+                <div class="step-title">Jadval (ixtiyoriy)</div>
+                <div class="step-desc">Forwarding qaysi soatlarda ishlash kerak?</div>
+
+                <div class="card" style="margin-bottom:16px;">
+                    <div class="settings-row">
+                        <div class="settings-row-left">
+                            <div class="settings-row-label">Vaqt chegarasi</div>
+                            <div class="settings-row-hint">O'chirilsa — 24/7 ishlaydi</div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="scheduleEnabled" onchange="toggleSchedule()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="scheduleFields" style="display:none;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label">Boshlash</label>
+                            <input class="form-input" id="scheduleFrom" type="time" value="08:00">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label">Tugash</label>
+                            <input class="form-input" id="scheduleTo" type="time" value="22:00">
+                        </div>
+                    </div>
+                    <div class="form-hint" style="margin-top:8px;">Vaqt zoʻnasi: UTC+5 (O'zbekiston)</div>
+                </div>
+            </div>
+
+            <!-- Navigatsiya tugmalari -->
+            <div style="display:flex;gap:10px;margin-top:20px;">
+                <button class="btn btn-ghost" id="prevBtn" onclick="prevStep()" style="display:none;">← Orqaga</button>
+                <button class="btn btn-primary btn-full" id="nextBtn" onclick="nextStep()">Davom etish →</button>
+            </div>
+        </div>
+
+        <!-- ===== LOGLAR ===== -->
+        <div class="page" id="page-logs">
+            <div class="page-header">
+                <div class="page-title">Loglar</div>
+                <div class="badge badge-gray" id="logCount">—</div>
+            </div>
+
+            <div id="logsList">
+                <div style="text-align:center;padding:32px;color:var(--text-muted);">Yuklanmoqda...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="navigateTo('dashboard')" id="nav-dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Dashboard
+        </div>
+        <div class="nav-item" onclick="navigateTo('accounts')" id="nav-accounts">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Akkauntlar
+        </div>
+        <div class="nav-item" onclick="navigateTo('forwardings')" id="nav-forwardings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>
+            Forwarding
+        </div>
+        <div class="nav-item" onclick="navigateTo('logs')" id="nav-logs">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Loglar
+        </div>
+    </nav>
+</div>
+
+<script>
+// ===== GLOBAL O'ZGARUVCHILAR =====
+const tg = window.Telegram?.WebApp;
+let currentUser = null;
+let telegramId = null;
+let currentStep = 1;
+const TOTAL_STEPS = 7;
+
+// Forma ma'lumotlari
+let formData = {
+    accountId: null,
+    source: '',
+    dest: '',
+    name: '',
+    copyMode: true,
+    filters: { keyword_whitelist: [], keyword_blacklist: [], media_only: false, text_only: false, every_nth: 0 },
+    modifications: { prefix: '', suffix: '', replacements: [], remove_caption: false },
+    schedule: null
+};
+
+let whitelist = [];
+let blacklist = [];
+let replacements = [];
+let confirmCallback = null;
+
+// ===== TELEGRAM WEBAPP INIT =====
+if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.setHeaderColor('#17212b');
+    tg.setBackgroundColor('#0e1621');
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+        telegramId = user.id;
+        document.getElementById('welcomeUsername').textContent = `${user.first_name}${user.username ? ' (@' + user.username + ')' : ''}`;
+    }
+} else {
+    // Brauzerde test uchun
+    telegramId = 123456789;
+    document.getElementById('welcomeUsername').textContent = 'Test foydalanuvchi';
+}
+
+// ===== API CHAQIRUVLAR =====
+const API = {
+    // Foydalanuvchi ma'lumotlari
+    async getUser() {
+        const r = await fetch(`/api/user/${telegramId}`);
+        return r.json();
+    },
+    // Akkauntlar ro'yxati
+    async getAccounts() {
+        const r = await fetch(`/api/accounts/${telegramId}`);
+        return r.json();
+    },
+    // Forwardinglar ro'yxati
+    async getForwardings() {
+        const r = await fetch(`/api/forwardings/${telegramId}`);
+        return r.json();
+    },
+    // Yangi forwarding yaratish
+    async createForwarding(data) {
+        const r = await fetch('/api/forwarding/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegram_id: telegramId, ...data })
+        });
+        return r.json();
+    },
+    // Forwarding yoq/o'chir
+    async toggleForwarding(id) {
+        const r = await fetch(`/api/forwarding/${id}/toggle`, { method: 'PUT' });
+        return r.json();
+    },
+    // Forwarding o'chirish
+    async deleteForwarding(id) {
+        const r = await fetch(`/api/forwarding/${id}`, { method: 'DELETE' });
+        return r.json();
+    },
+    // Loglar
+    async getLogs() {
+        const r = await fetch(`/api/logs/${telegramId}`);
+        return r.json();
+    }
+};
+
+// ===== NAVIGATSIYA =====
+function navigateTo(page) {
+    // Barcha sahifalarni yashirish
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    // Tanlangan sahifani ko'rsatish
+    document.getElementById(`page-${page}`)?.classList.add('active');
+    const navEl = document.getElementById(`nav-${page}`);
+    if (navEl) navEl.classList.add('active');
+
+    // Sahifaga mos ma'lumotlarni yuklash
+    if (page === 'dashboard') loadDashboard();
+    else if (page === 'accounts') loadAccounts();
+    else if (page === 'forwardings') loadForwardings();
+    else if (page === 'logs') loadLogs();
+    else if (page === 'new') initNewForwarding();
+}
+
+// ===== DASHBOARD YUKLASH =====
+async function loadDashboard() {
+    try {
+        const [forwardings, accounts, logs] = await Promise.all([
+            API.getForwardings(),
+            API.getAccounts(),
+            API.getLogs()
+        ]);
+
+        document.getElementById('statForwardings').textContent = forwardings.length || 0;
+        document.getElementById('statAccounts').textContent = accounts.length || 0;
+
+        const today = new Date().toDateString();
+        const todaySuccess = (logs || []).filter(l =>
+            l.status === 'success' && new Date(l.forwarded_at).toDateString() === today
+        ).length;
+        const failed = (logs || []).filter(l => l.status === 'failed').length;
+
+        document.getElementById('statToday').textContent = todaySuccess;
+        document.getElementById('statFailed').textContent = failed;
+
+        // Oxirgi 5 ta log
+        const recent = (logs || []).slice(0, 5);
+        const logsEl = document.getElementById('recentLogs');
+        if (recent.length === 0) {
+            logsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Hozircha loglar yo\'q</div>';
+        } else {
+            logsEl.innerHTML = recent.map(l => renderLogItem(l)).join('');
+        }
+    } catch (e) {
+        console.error('Dashboard yuklash xatosi:', e);
+    } finally {
+        hideLoader();
+    }
+}
+
+// ===== AKKAUNTLAR YUKLASH =====
+async function loadAccounts() {
+    showLoader();
+    try {
+        const accounts = await API.getAccounts();
+        const el = document.getElementById('accountsList');
+
+        if (!accounts || accounts.length === 0) {
+            el.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📱</div>
+                    <div class="empty-title">Akkaunt ulanmagan</div>
+                    <div class="empty-desc">Pastdagi tugma orqali Telegram akkauntingizni ulang</div>
+                </div>`;
+            return;
+        }
+
+        el.innerHTML = accounts.map(a => `
+            <div class="account-item">
+                <div class="account-avatar">${a.phone ? a.phone.slice(-2) : '?'}</div>
+                <div class="account-info">
+                    <div class="account-phone">${a.phone || 'Noma\'lum'}</div>
+                    <div class="account-status">${a.is_active ? '🟢 Faol' : '🔴 Nofaol'}</div>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="deleteAccount(${a.id})">O'chirish</button>
+            </div>
+        `).join('');
+    } catch (e) {
+        showToast('Xato: ' + e.message, 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// ===== FORWARDINGLAR YUKLASH =====
+async function loadForwardings() {
+    showLoader();
+    try {
+        const forwardings = await API.getForwardings();
+        const el = document.getElementById('forwardingsList');
+
+        if (!forwardings || forwardings.length === 0) {
+            el.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📡</div>
+                    <div class="empty-title">Forwarding yo'q</div>
+                    <div class="empty-desc">Yangi tugmasini bosib forwarding yarating</div>
+                </div>`;
+            return;
+        }
+
+        el.innerHTML = forwardings.map(f => `
+            <div class="forwarding-item" id="fwd-${f.id}">
+                <div class="forwarding-icon">📡</div>
+                <div class="forwarding-info">
+                    <div class="forwarding-name">${escapeHtml(f.name || 'Noma\'lum')}</div>
+                    <div class="forwarding-route">
+                        ${escapeHtml(f.source_username || f.source_chat_id || '?')} → ${escapeHtml(f.dest_username || f.dest_chat_id || '?')}
+                    </div>
+                </div>
+                <div class="forwarding-actions">
+                    <label class="toggle">
+                        <input type="checkbox" ${f.is_active ? 'checked' : ''} onchange="toggleFwd(${f.id}, this)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <button class="btn btn-danger btn-sm" onclick="deleteFwd(${f.id})">🗑</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        showToast('Xato: ' + e.message, 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// ===== LOGLAR YUKLASH =====
+async function loadLogs() {
+    showLoader();
+    try {
+        const logs = await API.getLogs();
+        const el = document.getElementById('logsList');
+        document.getElementById('logCount').textContent = `${(logs || []).length} ta`;
+
+        if (!logs || logs.length === 0) {
+            el.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <div class="empty-title">Loglar yo'q</div>
+                    <div class="empty-desc">Forwarding ishlash boshlanganda bu yerda ko'rinadi</div>
+                </div>`;
+            return;
+        }
+
+        el.innerHTML = `<div class="card" style="padding:0;">` +
+            logs.map(l => `
+                <div class="log-item" style="padding:12px 16px;">
+                    <div class="log-icon">${statusIcon(l.status)}</div>
+                    <div class="log-text">
+                        <div class="log-route">Xabar #${l.source_message_id || '?'}</div>
+                        <div class="log-time">${formatTime(l.forwarded_at)}</div>
+                    </div>
+                    <div class="log-status">${statusBadge(l.status)}</div>
+                </div>
+            `).join('') + '</div>';
+    } catch (e) {
+        showToast('Xato: ' + e.message, 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// ===== YANGI FORWARDING STEPLAR =====
+function initNewForwarding() {
+    currentStep = 1;
+    formData = {
+        accountId: null, source: '', dest: '', name: '',
+        copyMode: true,
+        filters: { keyword_whitelist: [], keyword_blacklist: [], media_only: false, text_only: false, every_nth: 0 },
+        modifications: { prefix: '', suffix: '', replacements: [], remove_caption: false },
+        schedule: null
+    };
+    whitelist = []; blacklist = []; replacements = [];
+    document.getElementById('whitelistChips').innerHTML = '';
+    document.getElementById('blacklistChips').innerHTML = '';
+    document.getElementById('replacementList').innerHTML = '';
+    updateStepUI();
+    loadAccountChoices();
+}
+
+async function loadAccountChoices() {
+    showLoader();
+    try {
+        const accounts = await API.getAccounts();
+        const el = document.getElementById('accountChoices');
+
+        if (!accounts || accounts.length === 0) {
+            el.innerHTML = `
+                <div class="empty-state" style="padding:24px;">
+                    <div class="empty-icon">📱</div>
+                    <div class="empty-title">Akkaunt yo'q</div>
+                    <div class="empty-desc">Avval akkaunt ulang</div>
+                </div>
+                <button class="btn btn-primary btn-full" onclick="loginWithBot()">Akkaunt ulash</button>`;
+            return;
+        }
+
+        el.innerHTML = accounts.map(a => `
+            <div class="option-card" id="acc-choice-${a.id}" onclick="selectAccount(${a.id})"
+                 style="display:flex;align-items:center;gap:12px;text-align:left;margin-bottom:8px;">
+                <div style="font-size:20px;">👤</div>
+                <div>
+                    <div style="font-weight:600;">${a.phone || 'Noma\'lum'}</div>
+                    <div style="font-size:12px;color:var(--text-muted);">${a.is_active ? 'Faol' : 'Nofaol'}</div>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        showToast('Akkauntlar yuklanmadi', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+function selectAccount(id) {
+    formData.accountId = id;
+    document.querySelectorAll('[id^="acc-choice-"]').forEach(el => el.classList.remove('selected'));
+    document.getElementById(`acc-choice-${id}`)?.classList.add('selected');
+}
+
+function selectMode(mode) {
+    formData.copyMode = (mode === 'copy');
+    document.getElementById('optCopy').classList.toggle('selected', mode === 'copy');
+    document.getElementById('optForward').classList.toggle('selected', mode === 'forward');
+}
+
+function toggleSchedule() {
+    const enabled = document.getElementById('scheduleEnabled').checked;
+    document.getElementById('scheduleFields').style.display = enabled ? 'block' : 'none';
+}
+
+function updateStepUI() {
+    // Barcha steplarni yashirish
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById(`step${currentStep}`)?.classList.remove('hidden');
+
+    // Progress bar
+    document.getElementById('newProgress').style.width = `${(currentStep / TOTAL_STEPS) * 100}%`;
+    document.getElementById('newStepNum').textContent = `${currentStep}/${TOTAL_STEPS}`;
+
+    const titles = ['Akkaunt', 'Manba', 'Manzil', 'Rejim', 'Filterlar', 'Modifikatsiya', 'Jadval'];
+    document.getElementById('newStepTitle').textContent = titles[currentStep - 1];
+
+    // Tugmalar
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    prevBtn.style.display = currentStep > 1 ? 'flex' : 'none';
+    nextBtn.textContent = currentStep === TOTAL_STEPS ? '✅ Saqlash' : 'Davom etish →';
+}
+
+function prevStep() {
+    if (currentStep > 1) { currentStep--; updateStepUI(); }
+}
+
+async function nextStep() {
+    // Validatsiya
+    if (currentStep === 1 && !formData.accountId) {
+        showToast('Akkaunt tanlang!', 'error'); return;
+    }
+    if (currentStep === 2) {
+        const src = document.getElementById('sourceInput').value.trim();
+        if (!src) { showToast('Manba kiriting!', 'error'); return; }
+        formData.source = src;
+    }
+    if (currentStep === 3) {
+        const dest = document.getElementById('destInput').value.trim();
+        const name = document.getElementById('fwdName').value.trim();
+        if (!dest) { showToast('Manzil kiriting!', 'error'); return; }
+        formData.dest = dest;
+        formData.name = name || `${formData.source} → ${dest}`;
+    }
+    if (currentStep === 5) {
+        formData.filters.keyword_whitelist = whitelist;
+        formData.filters.keyword_blacklist = blacklist;
+        formData.filters.media_only = document.getElementById('filterMediaOnly').checked;
+        formData.filters.text_only = document.getElementById('filterTextOnly').checked;
+        formData.filters.every_nth = parseInt(document.getElementById('everyNth').value) || 0;
+    }
+    if (currentStep === 6) {
+        formData.modifications.prefix = document.getElementById('modPrefix').value.trim();
+        formData.modifications.suffix = document.getElementById('modSuffix').value.trim();
+        formData.modifications.replacements = replacements;
+        formData.modifications.remove_caption = document.getElementById('removeCaption').checked;
+    }
+    if (currentStep === 7) {
+        // Saqlash
+        const schedEnabled = document.getElementById('scheduleEnabled').checked;
+        if (schedEnabled) {
+            formData.schedule = {
+                from: document.getElementById('scheduleFrom').value,
+                to: document.getElementById('scheduleTo').value
+            };
+        }
+        await saveForwarding();
+        return;
+    }
+
+    currentStep++;
+    updateStepUI();
+}
+
+async function saveForwarding() {
+    showLoader();
+    try {
+        const payload = {
+            account_id: formData.accountId,
+            name: formData.name,
+            source_username: formData.source,
+            dest_username: formData.dest,
+            copy_mode: formData.copyMode,
+            filters: formData.filters,
+            modifications: formData.modifications,
+            schedule: formData.schedule
+        };
+        const result = await API.createForwarding(payload);
+        if (result.id || result.success) {
+            showToast('✅ Forwarding yaratildi!', 'success');
+            navigateTo('forwardings');
+        } else {
+            showToast('Xato: ' + (result.detail || 'Noma\'lum xato'), 'error');
+        }
+    } catch(e) {
+        showToast('Saqlashda xato: ' + e.message, 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+function cancelNew() {
+    navigateTo('forwardings');
+}
+
+// ===== CHIP MANAGMENT =====
+function addChip(type) {
+    const inputId = type === 'whitelist' ? 'whitelistInput' : 'blacklistInput';
+    const chipsId = type === 'whitelist' ? 'whitelistChips' : 'blacklistChips';
+    const arr = type === 'whitelist' ? whitelist : blacklist;
+    const input = document.getElementById(inputId);
+    const val = input.value.trim();
+    if (!val) return;
+    arr.push(val);
+    input.value = '';
+    renderChips(chipsId, arr, type);
+}
+
+function renderChips(containerId, arr, type) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = arr.map((w, i) => `
+        <span class="chip">${escapeHtml(w)}<span class="chip-remove" onclick="removeChip('${type}', ${i})">×</span></span>
+    `).join('');
+}
+
+function removeChip(type, idx) {
+    const arr = type === 'whitelist' ? whitelist : blacklist;
+    arr.splice(idx, 1);
+    renderChips(type === 'whitelist' ? 'whitelistChips' : 'blacklistChips', arr, type);
+}
+
+function addReplacement() {
+    const from = document.getElementById('replaceFrom').value.trim();
+    const to = document.getElementById('replaceTo').value.trim();
+    if (!from) { showToast('\"Eski matn\" bo\'sh!', 'error'); return; }
+    replacements.push({ from, to });
+    document.getElementById('replaceFrom').value = '';
+    document.getElementById('replaceTo').value = '';
+    renderReplacements();
+}
+
+function renderReplacements() {
+    const el = document.getElementById('replacementList');
+    el.innerHTML = replacements.map((r, i) => `
+        <span class="chip">${escapeHtml(r.from)} → ${escapeHtml(r.to)}<span class="chip-remove" onclick="removeReplacement(${i})">×</span></span>
+    `).join('');
+}
+
+function removeReplacement(idx) {
+    replacements.splice(idx, 1);
+    renderReplacements();
+}
+
+// Enter tugmasi bilan chip qo'shish
+document.getElementById('whitelistInput').addEventListener('keydown', e => { if (e.key === 'Enter') addChip('whitelist'); });
+document.getElementById('blacklistInput').addEventListener('keydown', e => { if (e.key === 'Enter') addChip('blacklist'); });
+
+// ===== FORWARDING TOGGLE/DELETE =====
+async function toggleFwd(id, checkbox) {
+    try {
+        await API.toggleForwarding(id);
+    } catch(e) {
+        checkbox.checked = !checkbox.checked;
+        showToast('Xato: ' + e.message, 'error');
+    }
+}
+
+function deleteFwd(id) {
+    openConfirm('Forwardingi o\'chirish', 'Bu forwarding va unga tegishli barcha loglar o\'chiriladi. Davom etasizmi?', async () => {
+        showLoader();
+        try {
+            await API.deleteForwarding(id);
+            document.getElementById(`fwd-${id}`)?.remove();
+            showToast('Forwarding o\'chirildi', 'success');
+        } catch(e) {
+            showToast('Xato: ' + e.message, 'error');
+        } finally {
+            hideLoader();
+        }
+    });
+}
+
+async function deleteAccount(id) {
+    openConfirm('Akkauntni o\'chirish', 'Bu akkaunt va unga tegishli barcha forwardinglar to\'xtatiladi.', async () => {
+        showLoader();
+        try {
+            const r = await fetch(`/api/account/${id}`, { method: 'DELETE' });
+            await r.json();
+            loadAccounts();
+            showToast('Akkaunt o\'chirildi', 'success');
+        } catch(e) {
+            showToast('Xato: ' + e.message, 'error');
+        } finally {
+            hideLoader();
+        }
+    });
+}
+
+// Bot orqali login
+function loginWithBot() {
+    if (tg) {
+        tg.close();
+    } else {
+        showToast('Botga /login yozing', 'success');
+    }
+}
+
+// ===== CONFIRM MODAL =====
+function openConfirm(title, text, cb) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmText').textContent = text;
+    confirmCallback = cb;
+    document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeConfirm() {
+    document.getElementById('confirmModal').classList.add('hidden');
+    confirmCallback = null;
+}
+
+document.getElementById('confirmBtn').onclick = () => {
+    closeConfirm();
+    if (confirmCallback) confirmCallback();
+};
+
+document.getElementById('confirmModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeConfirm();
+});
+
+// ===== RENDER YORDAMCHILAR =====
+function renderLogItem(log) {
+    return `
+        <div class="log-item">
+            <div class="log-icon">${statusIcon(log.status)}</div>
+            <div class="log-text">
+                <div class="log-route">Xabar #${log.source_message_id || '?'}</div>
+                <div class="log-time">${formatTime(log.forwarded_at)}</div>
+            </div>
+            <div class="log-status">${statusBadge(log.status)}</div>
+        </div>`;
+}
+
+function statusIcon(status) {
+    if (status === 'success') return '✅';
+    if (status === 'failed') return '❌';
+    return '⏭️';
+}
+
+function statusBadge(status) {
+    if (status === 'success') return '<span class="badge badge-success">OK</span>';
+    if (status === 'failed') return '<span class="badge badge-danger">Xato</span>';
+    return '<span class="badge badge-gray">Filtrlangan</span>';
+}
+
+function formatTime(dt) {
+    if (!dt) return '—';
+    const d = new Date(dt);
+    return d.toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function escapeHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== LOADER =====
+function showLoader() { document.getElementById('loader').classList.remove('hidden'); }
+function hideLoader() { document.getElementById('loader').classList.add('hidden'); }
+
+// ===== TOAST =====
+function showToast(msg, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    toast.innerHTML = `<span>${icons[type] || ''}</span><span>${escapeHtml(msg)}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3200);
+}
+
+// ===== BOSHLASH =====
+window.addEventListener('load', () => {
+    showLoader();
+    loadDashboard();
+});
+</script>
+</body>
+</html>
