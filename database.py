@@ -24,18 +24,20 @@ logger = logging.getLogger(__name__)
 # Database URL
 # ─────────────────────────────────────────────
 import os
+import sys
 from sqlalchemy import create_engine
 
-# Buni faylning eng tepasida, class yoki funksiyadan tashqarida yozing
+# Muhit o'zgaruvchisini olish
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# Xatolikni aniqlash uchun tekshiruv
-if DATABASE_URL is None:
-    print("XATOLIK: DATABASE_URL topilmadi! Muhit o'zgaruvchisini tekshiring.")
-else:
-    print(f"DATABASE_URL topildi: {DATABASE_URL}")
+# Agar DATABASE_URL bo'sh bo'lsa, dasturni to'xtatish
+if not DATABASE_URL:
+    print("XATOLIK: DATABASE_URL topilmadi! Railway Variables bo'limini tekshiring.", file=sys.stderr)
+    sys.exit(1) # Dasturni xatolik bilan to'xtatish
 
-# Faqat undan keyin engine yarating
+print(f"DATABASE_URL muvaffaqiyatli yuklandi.")
+
+# Engine yaratish
 engine = create_engine(DATABASE_URL)
 
 # Railway ba'zan "postgres://" beradi — pg8000 uchun "postgresql+pg8000://" kerak
