@@ -1,7 +1,7 @@
 """
 database.py — SQLAlchemy modellari va ma'lumotlar bazasini ishga tushirish.
 AutoPass Bot loyihasi uchun barcha DB modellari shu yerda.
-Sync psycopg2 ishlatiladi (asyncpg Python 3.13 da ishlamaydi).
+pg8000 ishlatiladi (pure Python, asyncpg/psycopg2 Python 3.13 da ishlamaydi).
 """
 
 import os
@@ -25,13 +25,13 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-# Railway ba'zan "postgres://" beradi, SQLAlchemy "postgresql://" talab qiladi
+# Railway ba'zan "postgres://" beradi — pg8000 uchun "postgresql+pg8000://" kerak
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-# asyncpg ni psycopg2 ga almashtirish
-if "postgresql+asyncpg://" in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+pg8000://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+pg8000://", 1)
+elif DATABASE_URL.startswith("postgresql+asyncpg://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+pg8000://", 1)
 
 # ─────────────────────────────────────────────
 # Engine va Session
