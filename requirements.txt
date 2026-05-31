@@ -4,7 +4,7 @@ python-telegram-bot==20.7
 telethon==1.36.0
 sqlalchemy==2.0.36
 psycopg2-binary==2.9.9
-asyncpg==0.29.0
+asyncpg==0.30.0
 cryptography==42.0.5
 python-dotenv==1.0.0
 python-multipart==0.0.9
