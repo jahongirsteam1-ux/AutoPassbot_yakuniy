@@ -24,16 +24,19 @@ logger = logging.getLogger(__name__)
 # Database URL
 # ─────────────────────────────────────────────
 import os
+from sqlalchemy import create_engine
 
-# os.environ.get o'rniga os.getenv ishlating
-# database.py faylidagi o'zgartirish
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Buni faylning eng tepasida, class yoki funksiyadan tashqarida yozing
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
+# Xatolikni aniqlash uchun tekshiruv
 if DATABASE_URL is None:
-    raise ValueError("DATABASE_URL muhit o'zgaruvchisi o'rnatilmagan!")
+    print("XATOLIK: DATABASE_URL topilmadi! Muhit o'zgaruvchisini tekshiring.")
+else:
+    print(f"DATABASE_URL topildi: {DATABASE_URL}")
 
-if DATABASE_URL.startswith("postgres://"):
-    # qolgan kodlaringiz
+# Faqat undan keyin engine yarating
+engine = create_engine(DATABASE_URL)
 
 # Railway ba'zan "postgres://" beradi — pg8000 uchun "postgresql+pg8000://" kerak
 if DATABASE_URL.startswith("postgres://"):
